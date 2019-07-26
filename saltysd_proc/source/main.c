@@ -351,6 +351,23 @@ Result handleServiceCmd(int cmd)
 
         ret = 0;
     }
+    else if (cmd == 6) // LogToFile
+    {
+        IpcParsedCommand r = {0};
+        ipcParse(&r);
+
+        struct {
+            u64 magic;
+            u64 command;
+            char filename[0x301];
+            char log[64];
+            u32 reserved[2];
+        } *resp = r.Raw;
+
+        SaltySD_fileprintf(resp->filename, resp->log);
+
+        ret = 0;
+    }
     else
     {
         ret = 0xEE01;

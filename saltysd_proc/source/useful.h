@@ -6,13 +6,32 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-static inline void SaltySD_printf(const char* format, ...)
+static inline void SaltySD_fileprintf(const char *file, const char* format, ...)
 {
-    char buffer[256];
+    char buffer[0x1000];
 
     va_list args;
     va_start(args, format);
-    vsnprintf(buffer, 256, format, args);
+    vsnprintf(buffer, 0x1000, format, args);
+    va_end(args);
+    
+    svcOutputDebugString(buffer, strlen(buffer));
+    
+    FILE* f = fopen(file, "ab");
+    if (f)
+    {
+        fwrite(buffer, strlen(buffer), 1, f);
+        fclose(f);
+    }
+}
+
+static inline void SaltySD_printf(const char* format, ...)
+{
+    char buffer[0x1000];
+
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, 0x1000, format, args);
     va_end(args);
     
     svcOutputDebugString(buffer, strlen(buffer));
@@ -24,7 +43,6 @@ static inline void SaltySD_printf(const char* format, ...)
         fclose(f);
     }
 }
-
 
 #define debug_log(...) \
     {char log_buf[0x200]; snprintf(log_buf, 0x200, __VA_ARGS__); \

@@ -297,6 +297,47 @@ Result SaltySD_print(char* out)
     return ret;
 }
 
+Result SaltySD_LogToFile(const char *filename, char* out)
+{
+    Result ret;
+    IpcCommand c;
+
+    ipcInitialize(&c);
+
+    struct 
+    {
+        u64 magic;
+        u64 cmd_id;
+        char filename[0x301];
+        char log[64];
+        u64 reserved[2];
+    } *raw;
+
+    raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+    raw->magic = SFCI_MAGIC;
+    raw->cmd_id = 6;
+    strcpy(raw->filename, filename);
+    strncpy(raw->log, out, 64);
+
+    ret = ipcDispatch(saltysd);
+
+    if (R_SUCCEEDED(ret)) 
+    {
+        IpcParsedCommand r;
+        ipcParse(&r);
+
+        struct {
+            u64 magic;
+            u64 result;
+        } *resp = r.Raw;
+
+        ret = resp->result;
+    }
+
+    return ret;
+}
+
 Result SaltySD_printf(const char* format, ...)
 {
     Result ret;
@@ -323,4 +364,28 @@ Result SaltySD_printf(const char* format, ...)
     return ret;
 }
 
+Result SaltySD_FilePrintf(const char *file, const char* format, ...)
+{
+    Result ret;
+    char tmp[256];
 
+    va_list args;
+    va_start(args, format);
+    vsnprintf(tmp, 256, format, args);
+    va_end(args);
+
+    for (int i = 0; i < strlen(tmp); i)
+    {
+        ret = SaltySD_LogToFile(file, tmp + i);
+        i += 64;
+
+        if (ret) break;
+    }
+
+    if (ret)
+    {
+        debug_log("SaltySD Core: failed w/ error %x, msg: %s", ret, tmp);
+    }
+
+    return ret;
+}
